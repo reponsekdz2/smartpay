@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import Button from '../common/Button';
 import Input from '../common/Input';
+import Card from '../common/Card';
 
 const Login = () => {
   const [phone, setPhone] = useState('07');
@@ -19,21 +20,21 @@ const Login = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
       <div className="w-full max-w-sm mx-auto">
         <div className="mb-6 text-center">
-            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-quantum-primary to-quantum-secondary tracking-wider">SMART PAY</h1>
-            <p className="text-gray-400 mt-2">Welcome back!</p>
+            <h1 className="text-4xl font-extrabold text-primary tracking-wider">SMART PAY</h1>
+            <p className="text-text-secondary mt-2 text-lg">Log in to your account.</p>
         </div>
-        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-8 shadow-2xl">
+        <Card>
             <form onSubmit={handleLogin} className="space-y-6">
                 <Input label="Phone Number" id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="07X XXX XXXX" />
                 <Input label="PIN" id="pin" type="password" value={pin} onChange={(e) => setPin(e.target.value)} maxLength={6} />
-                {error && <p className="text-status-error text-center">{error}</p>}
-                <Button type="submit">Log In</Button>
+                {error && <p className="text-error text-center">{error}</p>}
+                <Button type="submit" size="lg">Log In</Button>
             </form>
-        </div>
-        <p className="text-center mt-6 text-gray-400">Don't have an account? <button onClick={() => setScreen('ONBOARDING')} className="font-semibold text-quantum-primary hover:underline">Sign Up</button></p>
+        </Card>
+        <p className="text-center mt-6 text-text-secondary">Don't have an account? <button onClick={() => setScreen('ONBOARDING')} className="font-bold text-primary hover:underline">Sign Up</button></p>
       </div>
     </div>
   );

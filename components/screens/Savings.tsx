@@ -3,16 +3,21 @@ import { useApp } from '../../context/AppContext';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import Input from '../common/Input';
+import { TransactionType } from '../../types';
 
 const Savings = () => {
-    const { user, savingsGoal, updateSavings } = useApp();
+    // FIX: 'savingsGoal' and 'updateSavings' do not exist on AppContext. Refactored to use available context.
+    const { user, addTransaction } = useApp();
     const [amount, setAmount] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    if (!savingsGoal) return <p>Loading savings...</p>;
+    const savingsWallet = user?.wallets.find(w => w.type === 'savings');
 
-    const progress = Math.min((savingsGoal.currentAmount / savingsGoal.goalAmount) * 100, 100);
+    if (!savingsWallet) return <p>Loading savings...</p>;
+    if (!user) return null;
+
+    const progress = savingsWallet.goal ? Math.min((savingsWallet.balance / savingsWallet.goal) * 100, 100) : 0;
     
     const handleDeposit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -23,13 +28,21 @@ const Savings = () => {
             setError("Please enter a valid amount.");
             return;
         }
-        if (user && depositAmount > user.balance) {
+        
+        // FIX: Property 'balance' does not exist on type 'User'. Check primary wallet instead.
+        const primaryWallet = user.wallets.find(w => w.type === 'primary');
+        if (!primaryWallet || depositAmount > primaryWallet.balance) {
             setError("Insufficient funds in main account.");
             return;
         }
 
         try {
-            await updateSavings(depositAmount);
+            // FIX: Call addTransaction instead of the non-existent updateSavings.
+            await addTransaction({
+                amount: depositAmount,
+                type: TransactionType.SAVINGS_DEPOSIT,
+                description: 'Deposit to Savings'
+            });
             setSuccess(`Successfully deposited ${depositAmount.toLocaleString('en-RW')} RWF.`);
             setAmount('');
         } catch (err: any) {
@@ -39,19 +52,16 @@ const Savings = () => {
     
     return (
         <div className="space-y-6">
-            <Card title={savingsGoal.name}>
+            <Card title={savingsWallet.name}>
                 <div className="text-center mb-4">
-                    <p className="text-4xl font-bold font-mono text-white">{savingsGoal.currentAmount.toLocaleString('en-RW')} RWF</p>
-                    <p className="text-gray-400">out of {savingsGoal.goalAmount.toLocaleString('en-RW')} RWF goal</p>
+                    <p className="text-4xl font-bold font-mono text-white">{savingsWallet.balance.toLocaleString('en-RW')} RWF</p>
+                    <p className="text-gray-400">out of {savingsWallet.goal?.toLocaleString('en-RW')} RWF goal</p>
                 </div>
                 <div className="w-full bg-white/10 rounded-full h-4">
                     <div className="bg-gradient-to-r from-neon-accent to-quantum-primary h-4 rounded-full" style={{ width: `${progress}%` }}></div>
                 </div>
                 <p className="text-center mt-2 font-semibold text-white">{progress.toFixed(1)}% Complete</p>
-                <div className="mt-4 pt-4 border-t border-white/10 flex justify-between">
-                    <span className="text-gray-300">Interest Earned:</span>
-                    <span className="font-bold text-status-success">+{savingsGoal.interestEarned.toLocaleString('en-RW')} RWF</span>
-                </div>
+                {/* Removed interest earned section as data is not available */}
             </Card>
 
             <Card title="Add to Savings">

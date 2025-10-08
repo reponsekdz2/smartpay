@@ -2,7 +2,6 @@ import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import Onboarding from './components/screens/Onboarding';
 import Login from './components/screens/Login';
-import Dashboard from './components/screens/Dashboard';
 import MainLayout from './components/layout/MainLayout';
 import TransferMoney from './components/screens/TransferMoney';
 import PayBills from './components/screens/PayBills';
@@ -15,6 +14,11 @@ import Business from './components/screens/Business';
 import History from './components/screens/History';
 import Analytics from './components/screens/Analytics';
 import Support from './components/screens/Support';
+import Wallet from './components/screens/Wallet';
+import Profile from './components/screens/Profile';
+import Social from './components/screens/Social';
+import Assistant from './components/screens/Assistant';
+
 
 const AppContent = () => {
   const { user, screen } = useApp();
@@ -28,8 +32,14 @@ const AppContent = () => {
 
   const renderScreen = () => {
     switch (screen) {
-      case 'DASHBOARD':
-        return <Dashboard />;
+      case 'WALLET':
+        return <Wallet />;
+      case 'PROFILE':
+        return <Profile />;
+      case 'SOCIAL':
+        return <Social />;
+      case 'ASSISTANT':
+        return <Assistant />;
       case 'TRANSFER':
         return <TransferMoney />;
       case 'BILLS':
@@ -53,7 +63,7 @@ const AppContent = () => {
       case 'SUPPORT':
         return <Support />;
       default:
-        return <Dashboard />;
+        return <Social />; // Default to the new Social Feed screen
     }
   };
 
@@ -63,8 +73,8 @@ const AppContent = () => {
 const App = () => {
   return (
     <AppProvider>
-      <div className="min-h-screen bg-dark-bg font-sans bg-cover bg-center" style={{backgroundImage: 'linear-gradient(rgba(13, 17, 23, 0.8), rgba(13, 17, 23, 1)), url(https://www.transparenttextures.com/patterns/cubes.png)'}}>
-        <div className="max-w-md mx-auto bg-white/5 backdrop-blur-xl shadow-2xl min-h-screen border-l border-r border-white/10">
+      <div className="min-h-screen bg-background font-sans">
+        <div className="max-w-md mx-auto bg-background shadow-2xl min-h-screen">
           <AppContent />
         </div>
       </div>

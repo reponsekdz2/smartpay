@@ -20,6 +20,9 @@ const Insurance = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
+    // FIX: Get primary wallet to access account number
+    const primaryWallet = user?.wallets.find(w => w.type === 'primary');
+
     const handlePurchase = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -65,7 +68,8 @@ const Insurance = () => {
                         value={details}
                         onChange={e => setDetails(e.target.value)}
                         placeholder={option.details.placeholder}
-                        defaultValue={selectedType === InsuranceType.ACCOUNT ? user?.accountNumber : ''}
+                        // FIX: Property 'accountNumber' does not exist on type 'User'.
+                        defaultValue={selectedType === InsuranceType.ACCOUNT ? primaryWallet?.accountNumber : ''}
                     />
                     <Input label="Confirm with PIN" type="password" value={pin} onChange={e => setPin(e.target.value)} maxLength={6} />
                     <Button type="submit">Pay & Activate Policy</Button>

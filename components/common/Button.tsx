@@ -3,19 +3,26 @@ import React from 'react';
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'danger';
+  size?: 'sm' | 'md' | 'lg';
 }
 
-const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', className, ...props }) => {
-  const baseClasses = "w-full font-bold py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-neon-accent/50 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100";
+const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', size = 'md', className, ...props }) => {
+  const baseClasses = "w-full font-bold rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200 ease-in-out active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed";
   
+  const sizeClasses = {
+    sm: 'py-2 px-3 text-sm',
+    md: 'py-3 px-4 text-base',
+    lg: 'py-4 px-5 text-lg'
+  }
+
   const variantClasses = {
-    primary: 'bg-gradient-to-r from-quantum-primary to-quantum-secondary text-white shadow-lg hover:shadow-xl',
-    secondary: 'bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/20',
-    danger: 'bg-status-error text-white shadow-lg hover:shadow-xl',
+    primary: 'bg-primary hover:bg-primary-dark text-white shadow-md',
+    secondary: 'bg-gray-200 hover:bg-gray-300 text-text-primary',
+    danger: 'bg-error text-white shadow-md',
   };
 
   return (
-    <button className={`${baseClasses} ${variantClasses[variant]} ${className}`} {...props}>
+    <button className={`${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`} {...props}>
       {children}
     </button>
   );

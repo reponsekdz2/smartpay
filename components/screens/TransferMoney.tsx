@@ -14,6 +14,8 @@ const TransferMoney = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const primaryBalance = user?.wallets.find(w => w.type === 'primary')?.balance || 0;
+
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -26,7 +28,7 @@ const TransferMoney = () => {
       setError('Invalid amount.');
       return;
     }
-    if (user && numericAmount > user.balance) {
+    if (numericAmount > primaryBalance) {
       setError('Insufficient funds.');
       return;
     }
@@ -49,7 +51,7 @@ const TransferMoney = () => {
         description: `Sent to ${recipient}`,
         recipient,
         category: 'Other'
-      }, 10); // Award 10 XP for transfer
+      });
       setSuccess(`Successfully sent ${amount} RWF to ${recipient}.`);
       setRecipient('');
       setAmount('');
@@ -64,8 +66,8 @@ const TransferMoney = () => {
     return (
       <Card title="Send Money">
         <form onSubmit={handleContinue} className="space-y-6">
-          {error && <p className="text-status-error text-center">{error}</p>}
-          {success && <p className="text-status-success text-center">{success}</p>}
+          {error && <p className="text-error text-center">{error}</p>}
+          {success && <p className="text-success text-center">{success}</p>}
           <Input label="Recipient's Phone Number" id="recipient" type="tel" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="+250 7XX XXX XXX" />
           <Input label="Amount (RWF)" id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Enter amount" />
           <Button type="submit">Continue</Button>
@@ -76,22 +78,22 @@ const TransferMoney = () => {
 
   return (
     <Card title="Confirm Transfer">
-      <div className="space-y-4 mb-6 p-4 rounded-lg bg-black/20">
+      <div className="space-y-4 mb-6 p-4 rounded-lg bg-background">
         <div className="flex justify-between">
-          <span className="text-gray-400">To:</span>
-          <span className="font-semibold text-white">{recipient}</span>
+          <span className="text-text-secondary">To:</span>
+          <span className="font-semibold text-text-primary">{recipient}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-400">Amount:</span>
-          <span className="font-semibold text-white">{parseFloat(amount).toLocaleString('en-RW')} RWF</span>
+          <span className="text-text-secondary">Amount:</span>
+          <span className="font-semibold text-text-primary">{parseFloat(amount).toLocaleString('en-RW')} RWF</span>
         </div>
-        <div className="flex justify-between text-lg font-bold text-white pt-2 border-t border-white/10">
+        <div className="flex justify-between text-lg font-bold text-text-primary pt-2 border-t border-gray-200">
           <span>Total:</span>
           <span>{parseFloat(amount).toLocaleString('en-RW')} RWF</span>
         </div>
       </div>
       <form onSubmit={handleConfirm} className="space-y-4">
-        {error && <p className="text-status-error text-center">{error}</p>}
+        {error && <p className="text-error text-center">{error}</p>}
         <Input label="Enter your PIN to confirm" id="pin" type="password" value={pin} onChange={(e) => setPin(e.target.value)} maxLength={6} />
         <Button type="submit">Confirm & Send</Button>
         <Button type="button" variant="secondary" onClick={() => setStep(1)}>Back</Button>

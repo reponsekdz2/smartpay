@@ -5,14 +5,14 @@ import Card from '../common/Card';
 import Input from '../common/Input';
 
 const TransactionIcon = ({ type }: { type: TransactionType }) => {
-    const sentStyle = "bg-status-error/20 text-status-error";
-    const receivedStyle = "bg-status-success/20 text-status-success";
-    const otherStyle = "bg-status-info/20 text-status-info";
+    const sentStyle = "bg-red-100 text-red-600";
+    const receivedStyle = "bg-green-100 text-green-600";
+    const otherStyle = "bg-blue-100 text-blue-600";
     
-    let style;
-    let icon;
+    let style, icon;
 
     switch (type) {
+        case TransactionType.EXPENSE:
         case TransactionType.SENT:
         case TransactionType.MERCHANT_PAYMENT:
         case TransactionType.LOAN_REPAYMENT:
@@ -23,6 +23,7 @@ const TransactionIcon = ({ type }: { type: TransactionType }) => {
             style = sentStyle;
             icon = '↑';
             break;
+        case TransactionType.INCOME:
         case TransactionType.RECEIVED:
         case TransactionType.LOAN_DISBURSEMENT:
             style = receivedStyle;
@@ -32,49 +33,56 @@ const TransactionIcon = ({ type }: { type: TransactionType }) => {
             style = otherStyle;
             icon = '•';
     }
-
     return <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl ${style}`}>{icon}</div>;
 };
 
+const FilterChip = ({ label, active, onClick }: { label: string, active: boolean, onClick: () => void }) => (
+    <button onClick={onClick} className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-200 ${active ? 'bg-primary-light text-primary' : 'bg-background hover:bg-gray-200 text-text-secondary'}`}>
+        {label}
+    </button>
+)
 
 const History = () => {
     const { transactions } = useApp();
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterType, setFilterType] = useState('ALL');
+    const [filterType, setFilterType] = useState<string>('ALL');
 
     const filteredTransactions = useMemo(() => {
         return transactions.filter(tx => {
             const matchesSearch = tx.description.toLowerCase().includes(searchTerm.toLowerCase()) || tx.amount.toString().includes(searchTerm);
-            const matchesType = filterType === 'ALL' || tx.type === filterType;
-            return matchesSearch && matchesType;
+            
+            if (filterType === 'ALL') return matchesSearch;
+            if (filterType === 'INCOME') return matchesSearch && [TransactionType.INCOME, TransactionType.RECEIVED, TransactionType.LOAN_DISBURSEMENT].includes(tx.type);
+            if (filterType === 'EXPENSES') return matchesSearch && ![TransactionType.INCOME, TransactionType.RECEIVED, TransactionType.LOAN_DISBURSEMENT].includes(tx.type);
+            
+            return matchesSearch && tx.type === filterType;
         });
     }, [transactions, searchTerm, filterType]);
 
     return (
-        <Card title="Transaction History">
-            <div className="space-y-4">
-                <Input placeholder="Search by description or amount..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                <select value={filterType} onChange={e => setFilterType(e.target.value)} className="w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-neon-accent focus:border-neon-accent/50 focus:outline-none">
-                    <option value="ALL" style={{backgroundColor: '#161B22'}}>All Types</option>
-                    {Object.values(TransactionType).map(type => (
-                        <option key={type} value={type} style={{backgroundColor: '#161B22'}}>{type.replace(/_/g, ' ')}</option>
-                    ))}
-                </select>
+        <Card title="Transaction History" padding="sm" className="h-full">
+            <div className="p-2 space-y-4">
+                <Input placeholder="Search transactions..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                <div className="flex space-x-2 overflow-x-auto pb-2">
+                    <FilterChip label="All" active={filterType === 'ALL'} onClick={() => setFilterType('ALL')} />
+                    <FilterChip label="Income" active={filterType === 'INCOME'} onClick={() => setFilterType('INCOME')} />
+                    <FilterChip label="Expenses" active={filterType === 'EXPENSES'} onClick={() => setFilterType('EXPENSES')} />
+                </div>
 
-                <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                <div className="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
                     {filteredTransactions.length > 0 ? filteredTransactions.map((tx: Transaction) => (
-                        <div key={tx.id} className="flex items-center space-x-4 p-2 rounded-lg hover:bg-white/5">
+                        <div key={tx.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50">
                             <TransactionIcon type={tx.type} />
                             <div className="flex-grow">
-                                <p className="font-semibold text-white">{tx.description}</p>
-                                <p className="text-sm text-gray-400">{new Date(tx.date).toLocaleString()}</p>
+                                <p className="font-bold text-text-primary">{tx.description}</p>
+                                <p className="text-sm text-text-secondary">{new Date(tx.date).toLocaleDateString()}</p>
                             </div>
-                            <div className={`font-bold font-mono ${[TransactionType.SENT, TransactionType.BILL_PAYMENT, TransactionType.AIRTIME, TransactionType.INSURANCE_PREMIUM, TransactionType.SAVINGS_DEPOSIT].includes(tx.type) ? 'text-status-error' : 'text-status-success'}`}>
-                                {`${[TransactionType.SENT, TransactionType.BILL_PAYMENT, TransactionType.AIRTIME, TransactionType.INSURANCE_PREMIUM, TransactionType.SAVINGS_DEPOSIT].includes(tx.type) ? '-' : '+'} ${tx.amount.toLocaleString('en-RW')} RWF`}
+                            <div className={`font-bold text-right ${[TransactionType.INCOME, TransactionType.RECEIVED].includes(tx.type) ? 'text-success' : 'text-text-primary'}`}>
+                                {`${[TransactionType.INCOME, TransactionType.RECEIVED].includes(tx.type) ? '+' : '-'} ${tx.amount.toLocaleString('en-RW')} RWF`}
                             </div>
                         </div>
                     )) : (
-                        <p className="text-center text-gray-400 py-4">No transactions found.</p>
+                        <p className="text-center text-text-secondary py-8">No transactions found.</p>
                     )}
                 </div>
             </div>

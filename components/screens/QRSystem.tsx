@@ -15,9 +15,13 @@ const QRSystem = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // FIX: Get primary wallet to access account number
+  const primaryWallet = user?.wallets.find(w => w.type === 'primary');
+
   const qrValue = JSON.stringify({
     name: user?.name,
-    accountNumber: user?.accountNumber,
+    // FIX: Property 'accountNumber' does not exist on type 'User'.
+    accountNumber: primaryWallet?.accountNumber,
   });
 
   const handlePayment = async (e: React.FormEvent) => {
@@ -38,7 +42,8 @@ const QRSystem = () => {
             description: `QR Payment to Merchant`,
             recipient: "Scanned Merchant",
             category: "Food & Dining"
-        }, 5); // Award 5 XP
+        // FIX: Expected 1 arguments, but got 2.
+        });
         setSuccess(`Successfully paid ${amount} RWF.`);
         setScannedData('');
         setAmount('');
@@ -77,7 +82,8 @@ const QRSystem = () => {
           </div>
           <p className="text-gray-400">Show this code to receive money.</p>
           <p className="font-semibold text-lg text-white">{user?.name}</p>
-          <p className="text-gray-300 font-mono">{user?.accountNumber}</p>
+          {/* FIX: Property 'accountNumber' does not exist on type 'User'. */}
+          <p className="text-gray-300 font-mono">{primaryWallet?.accountNumber}</p>
         </div>
       </Card>
       <Button onClick={() => setIsScanning(true)}>Scan to Pay</Button>

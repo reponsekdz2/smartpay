@@ -1,4 +1,4 @@
-import { User, Transaction, Loan, SavingsGoal, InsurancePolicy, MerchantData, TransactionType, InsuranceType } from '../types';
+import { User, Transaction, Loan, InsurancePolicy, MerchantData, TransactionType, Wallet } from '../types';
 
 // Helper to get/set data from localStorage
 const getFromStorage = <T,>(key: string): T | null => {
@@ -13,33 +13,65 @@ const setToStorage = <T,>(key: string, data: T): void => {
 // --- USER MANAGEMENT ---
 export const createUser = async (phone: string, pin: string, name: string, nationalId: string): Promise<User> => {
   const userId = `user_${phone}`;
+
+  const initialWallets: Wallet[] = [
+    { id: 'wallet_main', name: "Main Account", balance: 85430, type: 'primary', accountNumber: `2500${phone.substring(1)}` },
+    { id: 'wallet_savings', name: "Savings", balance: 25000, type: 'savings', goal: 100000, progress: 25 },
+    { id: 'wallet_investment', name: "Investment", balance: 15000, type: 'investment', returnValue: 1200 },
+    { id: 'wallet_emergency', name: "Emergency Fund", balance: 10000, type: 'emergency' }
+  ];
+
   const newUser: User = {
     id: userId,
     phone,
     pin,
     name,
     nationalId,
-    balance: 25000,
-    accountNumber: `2500${phone.substring(1)}`,
     securityScore: 85,
-    activePolicies: 0,
     isCardFrozen: false,
     loginHistory: [new Date()],
     has2FA: false,
     spendingLimits: { daily: 500000, monthly: 2000000 },
-    level: 1,
-    xp: 0,
-    achievements: [],
+    
+    // Profile
+    avatar: `https://api.dicebear.com/8.x/initials/svg?seed=${name}`,
+    coverPhoto: `https://picsum.photos/seed/${userId}/400/200`,
+    verified: true,
+    status: 'online',
+    bio: 'Digital finance enthusiast | Exploring the future of money in Rwanda.',
+    friendsCount: 124,
+    transactionCount: 47,
+    trustScore: 92,
+    email: `${name.split(' ').join('.').toLowerCase()}@example.com`,
+    address: 'Kigali, Rwanda',
+    creditScore: 720,
+    verifications: [
+        { name: 'National ID', verified: true },
+        { name: 'Phone Number', verified: true },
+        { name: 'Email Address', verified: false },
+    ],
+    riskLevel: 'low',
+
+    // Preferences
+    notifications: true,
+    biometricLogin: true,
+    darkMode: false,
+    language: 'English',
+
+    // Wallets
+    wallets: initialWallets,
   };
   setToStorage(userId, newUser);
   setToStorage('currentUser', newUser);
   localStorage.setItem('hasAccount', 'true');
   
   // Initialize other data
-  setToStorage(`transactions_${userId}`, []);
+  const initialTransactions: Transaction[] = [
+    { id: 'tx_init_1', date: new Date(Date.now() - 86400000), amount: 300000, type: TransactionType.INCOME, description: 'Salary from Company XYZ', status: 'Successful', category: 'Salary', recurring: true },
+    { id: 'tx_init_2', date: new Date(Date.now() - 3600000), amount: 15000, type: TransactionType.EXPENSE, description: 'Simba Supermarket', status: 'Successful', category: 'Shopping', receiptAvailable: true },
+  ];
+  setToStorage(`transactions_${userId}`, initialTransactions);
   setToStorage(`loans_${userId}`, []);
-  const initialSavings: SavingsGoal = { id: `savings_${userId}`, name: "Rainy Day Fund", goalAmount: 100000, currentAmount: 15000, interestEarned: 150 };
-  setToStorage(`savings_${userId}`, initialSavings);
   setToStorage(`policies_${userId}`, []);
   const initialMerchantData: MerchantData = { todaysSales: 45000, transactionCount: 12, pendingPayout: 40000, customerCount: 8 };
   setToStorage(`merchant_${userId}`, initialMerchantData);
@@ -117,21 +149,6 @@ export const createLoan = async (userId: string, amount: number, duration: numbe
   loans.push(newLoan);
   setToStorage(`loans_${userId}`, loans);
   await addTransaction(userId, { amount, type: TransactionType.LOAN_DISBURSEMENT, description: "Loan Disbursement" });
-};
-
-// --- SAVINGS ---
-export const getSavingsGoal = async (userId: string): Promise<SavingsGoal | null> => {
-  return getFromStorage<SavingsGoal>(`savings_${userId}`);
-};
-
-export const updateSavings = async (userId: string, amount: number): Promise<void> => {
-  const savings = await getSavingsGoal(userId);
-  if (savings) {
-    savings.currentAmount += amount;
-    savings.interestEarned = savings.currentAmount * 0.01; // Recalculate interest
-    setToStorage(`savings_${userId}`, savings);
-    await addTransaction(userId, { amount, type: TransactionType.SAVINGS_DEPOSIT, description: "Deposit to Savings" });
-  }
 };
 
 // --- INSURANCE ---

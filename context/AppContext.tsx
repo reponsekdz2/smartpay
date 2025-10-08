@@ -1,28 +1,23 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { User, Transaction, Loan, SavingsGoal, InsurancePolicy, MerchantData, Screen, AppContextType as AppContextState } from '../types';
+import { User, Transaction, Loan, InsurancePolicy, MerchantData, Screen, Wallet, TransactionType } from '../types';
 import * as api from '../services/mockApi';
 
 interface AppContextType {
   user: User | null;
   transactions: Transaction[];
   loans: Loan[];
-  savingsGoal: SavingsGoal | null;
   policies: InsurancePolicy[];
   merchantData: MerchantData | null;
   screen: Screen;
-  appContext: AppContextState;
   login: (phone: string, pin: string) => Promise<boolean>;
   logout: () => void;
   createUser: (phone: string, pin: string, name: string, nationalId: string) => Promise<User | null>;
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'date' | 'status'>, xp?: number) => Promise<void>;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'date' | 'status'>) => Promise<void>;
   applyForLoan: (amount: number, duration: number) => Promise<void>;
-  updateSavings: (amount: number) => Promise<void>;
   purchaseInsurance: (policy: Omit<InsurancePolicy, 'id' | 'startDate' | 'endDate' | 'policyNumber'>) => Promise<void>;
   setScreen: (screen: Screen) => void;
   updateSecurity: (updates: Partial<Pick<User, 'isCardFrozen' | 'pin' | 'has2FA'>>) => Promise<void>;
   refreshUser: () => Promise<void>;
-  addXP: (amount: number) => Promise<void>;
-  setAppContext: (context: AppContextState) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -31,18 +26,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
-  const [savingsGoal, setSavingsGoal] = useState<SavingsGoal | null>(null);
   const [policies, setPolicies] = useState<InsurancePolicy[]>([]);
   const [merchantData, setMerchantData] = useState<MerchantData | null>(null);
   const [screen, setScreen] = useState<Screen>('LOGIN');
-  const [appContext, setAppContext] = useState<AppContextState>('morning');
 
   const loadData = useCallback(async (currentUser: User) => {
     setTransactions(await api.getTransactions(currentUser.id));
     setLoans(await api.getLoans(currentUser.id));
-    setSavingsGoal(await api.getSavingsGoal(currentUser.id));
     setPolicies(await api.getInsurancePolicies(currentUser.id));
     setMerchantData(await api.getMerchantData(currentUser.id));
+    // User object with wallets is already loaded at login
   }, []);
 
   useEffect(() => {
@@ -50,7 +43,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const loggedInUser = await api.getCurrentUser();
       if (loggedInUser) {
         setUser(loggedInUser);
-        setScreen('DASHBOARD');
+        setScreen('SOCIAL');
         await loadData(loggedInUser);
       } else {
         const hasCreatedAccount = localStorage.getItem('hasAccount');
@@ -64,7 +57,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const loggedInUser = await api.login(phone, pin);
     if (loggedInUser) {
       setUser(loggedInUser);
-      setScreen('DASHBOARD');
+      setScreen('SOCIAL');
       await loadData(loggedInUser);
       return true;
     }
@@ -81,70 +74,97 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const newUser = await api.createUser(phone, pin, name, nationalId);
     if(newUser) {
       setUser(newUser);
-      setScreen('DASHBOARD');
+      setScreen('SOCIAL');
       await loadData(newUser);
     }
     return newUser;
   };
 
-  const addXP = async (amount: number) => {
+  // FIX: Reworked transaction logic to handle savings deposits correctly and be more robust.
+  const addTransaction = async (tx: Omit<Transaction, 'id' | 'date' | 'status'>) => {
     if (!user) return;
-    const newXP = user.xp + amount;
-    const newLevel = Math.floor(newXP / 100) + 1;
-    const updatedUser = { ...user, xp: newXP, level: newLevel };
-    await api.updateUser(updatedUser);
-    setUser(updatedUser);
-  }
+    
+    const primaryWallet = user.wallets.find(w => w.type === 'primary');
+    if (!primaryWallet) throw new Error("Primary wallet not found");
 
-  const addTransaction = async (tx: Omit<Transaction, 'id' | 'date' | 'status'>, xp: number = 5) => {
-    if (!user) return;
-    const newBalance = tx.type === 'SENT' || tx.type === 'BILL_PAYMENT' || tx.type === 'AIRTIME' || tx.type === 'INSURANCE_PREMIUM' || tx.type === 'SAVINGS_DEPOSIT' || tx.type === 'MERCHANT_PAYMENT' || tx.type === 'LOAN_REPAYMENT'
-      ? user.balance - tx.amount
-      : user.balance + tx.amount;
+    const isDebit = [
+        TransactionType.SENT, 
+        TransactionType.BILL_PAYMENT, 
+        TransactionType.AIRTIME, 
+        TransactionType.INSURANCE_PREMIUM, 
+        TransactionType.SAVINGS_DEPOSIT, 
+        TransactionType.MERCHANT_PAYMENT, 
+        TransactionType.LOAN_REPAYMENT,
+        TransactionType.EXPENSE,
+    ].includes(tx.type);
+
+    const newBalance = isDebit
+      ? primaryWallet.balance - tx.amount
+      : primaryWallet.balance + tx.amount;
     
     if (newBalance < 0) {
-        throw new Error("Insufficient funds");
+        throw new Error("Insufficient funds in primary wallet");
     }
 
     await api.addTransaction(user.id, tx);
-    const updatedUser = { ...user, balance: newBalance };
+
+    let updatedWallets = user.wallets.map(w => 
+      w.type === 'primary' ? { ...w, balance: newBalance } : w
+    );
+
+    // If it's a savings deposit, also update the savings wallet
+    if (tx.type === TransactionType.SAVINGS_DEPOSIT) {
+        updatedWallets = updatedWallets.map(w => {
+            if (w.type === 'savings') {
+                const newSavingsBalance = w.balance + tx.amount;
+                const newProgress = w.goal ? Math.min((newSavingsBalance / w.goal) * 100, 100) : w.progress;
+                return { ...w, balance: newSavingsBalance, progress: newProgress };
+            }
+            return w;
+        });
+    }
+    
+    const updatedUser = { ...user, wallets: updatedWallets };
+    
     await api.updateUser(updatedUser);
     setUser(updatedUser);
     setTransactions(await api.getTransactions(user.id));
-    await addXP(xp);
   };
   
   const applyForLoan = async (amount: number, duration: number) => {
     if (!user) return;
+    const primaryWallet = user.wallets.find(w => w.type === 'primary');
+    if (!primaryWallet) throw new Error("Primary wallet not found");
+
     await api.createLoan(user.id, amount, duration);
-    const updatedUser = { ...user, balance: user.balance + amount };
+    
+    const updatedWallets = user.wallets.map(w => 
+      w.type === 'primary' ? { ...w, balance: w.balance + amount } : w
+    );
+    const updatedUser = { ...user, wallets: updatedWallets };
+
     await api.updateUser(updatedUser);
     setUser(updatedUser);
     setLoans(await api.getLoans(user.id));
     setTransactions(await api.getTransactions(user.id));
-    await addXP(25);
   };
-
-  const updateSavings = async (amount: number) => {
-      if(!user) return;
-      await api.updateSavings(user.id, amount);
-      const updatedUser = {...user, balance: user.balance - amount};
-      await api.updateUser(updatedUser);
-      setUser(updatedUser);
-      setSavingsGoal(await api.getSavingsGoal(user.id));
-      setTransactions(await api.getTransactions(user.id));
-      await addXP(15);
-  }
 
   const purchaseInsurance = async (policyData: Omit<InsurancePolicy, 'id' | 'startDate' | 'endDate' | 'policyNumber'>) => {
       if(!user) return;
+      const primaryWallet = user.wallets.find(w => w.type === 'primary');
+      if (!primaryWallet) throw new Error("Primary wallet not found");
+
       await api.addInsurancePolicy(user.id, policyData);
-      const updatedUser = {...user, balance: user.balance - policyData.premium, activePolicies: user.activePolicies + 1 };
+
+      const updatedWallets = user.wallets.map(w => 
+        w.type === 'primary' ? { ...w, balance: w.balance - policyData.premium } : w
+      );
+      const updatedUser = { ...user, wallets: updatedWallets };
+
       await api.updateUser(updatedUser);
       setUser(updatedUser);
       setPolicies(await api.getInsurancePolicies(user.id));
       setTransactions(await api.getTransactions(user.id));
-      await addXP(20);
   }
 
   const updateSecurity = async (updates: Partial<Pick<User, 'isCardFrozen' | 'pin' | 'has2FA'>>) => {
@@ -163,30 +183,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-
   return (
     <AppContext.Provider
       value={{
         user,
         transactions,
         loans,
-        savingsGoal,
         policies,
         merchantData,
         screen,
-        appContext,
         login,
         logout,
         createUser,
         addTransaction,
         applyForLoan,
-        updateSavings,
         purchaseInsurance,
         setScreen,
         updateSecurity,
         refreshUser,
-        addXP,
-        setAppContext,
       }}
     >
       {children}

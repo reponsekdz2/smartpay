@@ -1,13 +1,22 @@
+export interface Wallet {
+  id: string;
+  name: string;
+  balance: number;
+  type: 'primary' | 'savings' | 'investment' | 'emergency';
+  accountNumber?: string;
+  goal?: number;
+  progress?: number;
+  returnValue?: number;
+  gradient?: string;
+}
+
 export interface User {
   id: string;
   phone: string;
   pin: string;
   name: string;
   nationalId: string;
-  balance: number;
-  accountNumber: string;
   securityScore: number;
-  activePolicies: number;
   isCardFrozen: boolean;
   loginHistory: Date[];
   has2FA: boolean;
@@ -15,9 +24,30 @@ export interface User {
     daily: number;
     monthly: number;
   };
-  level: number;
-  xp: number;
-  achievements: string[];
+  
+  // Profile Fields
+  avatar: string;
+  coverPhoto: string;
+  verified: boolean;
+  status: 'online' | 'offline';
+  bio: string;
+  friendsCount: number;
+  transactionCount: number;
+  trustScore: number;
+  email: string;
+  address: string;
+  creditScore: number;
+  verifications: { name: string, verified: boolean }[];
+  riskLevel: 'low' | 'medium' | 'high';
+  
+  // Preferences
+  notifications: boolean;
+  biometricLogin: boolean;
+  darkMode: boolean;
+  language: 'English' | 'Kinyarwanda';
+  
+  // Wallets - Balance is now managed here
+  wallets: Wallet[];
 }
 
 export enum TransactionType {
@@ -30,6 +60,8 @@ export enum TransactionType {
   INSURANCE_PREMIUM = 'INSURANCE_PREMIUM',
   SAVINGS_DEPOSIT = 'SAVINGS_DEPOSIT',
   MERCHANT_PAYMENT = 'MERCHANT_PAYMENT',
+  INCOME = 'INCOME',
+  EXPENSE = 'EXPENSE',
 }
 
 export interface Transaction {
@@ -41,7 +73,10 @@ export interface Transaction {
   status: 'Successful' | 'Pending' | 'Failed';
   recipient?: string;
   sender?: string;
-  category?: 'Food & Dining' | 'Transportation' | 'Bills & Utilities' | 'Entertainment' | 'Other';
+  // FIX: This comparison appears to be unintentional because the types '"Shopping" | "Salary" | "Transportation" | "Bills & Utilities" | "Entertainment" | "Other"' and '"Food & Dining"' have no overlap.
+  category?: 'Shopping' | 'Salary' | 'Transportation' | 'Bills & Utilities' | 'Entertainment' | 'Other' | 'Food & Dining';
+  receiptAvailable?: boolean;
+  recurring?: boolean;
 }
 
 export interface Loan {
@@ -53,14 +88,6 @@ export interface Loan {
   startDate: Date;
   dueDate: Date;
   isRepaid: boolean;
-}
-
-export interface SavingsGoal {
-  id: string;
-  name: string;
-  goalAmount: number;
-  currentAmount: number;
-  interestEarned: number;
 }
 
 export enum InsuranceType {
@@ -91,7 +118,10 @@ export interface MerchantData {
 export type Screen =
   | 'ONBOARDING'
   | 'LOGIN'
-  | 'DASHBOARD'
+  | 'WALLET'
+  | 'PROFILE'
+  | 'SOCIAL'
+  | 'ASSISTANT'
   | 'TRANSFER'
   | 'BILLS'
   | 'QR'

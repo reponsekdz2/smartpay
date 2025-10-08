@@ -41,7 +41,7 @@ const PayBills = () => {
                 description: `Payment for ${billerDetails[selectedBiller].name}`,
                 recipient: billerDetails[selectedBiller].name,
                 category: 'Bills & Utilities'
-            }, 10); // Award 10 XP for paying a bill
+            });
             setSuccess(`Payment of ${amount} RWF to ${billerDetails[selectedBiller].name} was successful.`);
             setAccountNumber('');
             setAmount('');
@@ -55,11 +55,11 @@ const PayBills = () => {
     if (!selectedBiller) {
         return (
             <Card title="Pay Bills">
-                {success && <p className="text-status-success text-center mb-4">{success}</p>}
+                {success && <p className="text-success text-center mb-4">{success}</p>}
                 <div className="grid grid-cols-2 gap-4">
                     {Object.entries(billerDetails).map(([key, value]) => (
-                        <button key={key} onClick={() => setSelectedBiller(key as Biller)} className="p-4 bg-white/5 border border-white/10 rounded-lg text-center hover:bg-white/10 hover:border-white/20 transition-colors duration-300">
-                            <span className="font-semibold text-white">{value.name}</span>
+                        <button key={key} onClick={() => setSelectedBiller(key as Biller)} className="p-4 bg-background border border-gray-200 rounded-lg text-center hover:bg-gray-200 transition-colors duration-200">
+                            <span className="font-semibold text-text-primary">{value.name}</span>
                         </button>
                     ))}
                 </div>
@@ -70,7 +70,7 @@ const PayBills = () => {
     return (
         <Card title={`Pay ${billerDetails[selectedBiller].name}`}>
             <form onSubmit={handlePayment} className="space-y-4">
-                {error && <p className="text-status-error text-center">{error}</p>}
+                {error && <p className="text-error text-center">{error}</p>}
                 <Input 
                     label={billerDetails[selectedBiller].inputLabel} 
                     id="accountNumber" 
